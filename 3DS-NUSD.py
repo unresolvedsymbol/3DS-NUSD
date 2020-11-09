@@ -14,211 +14,216 @@ tickettemplate = binascii.a2b_hex('00010004d15ea5e0d15ea5e0d15ea5e0d15ea5e0d15ea
 parser = ArgumentParser()
 parser.add_argument('titleid', type=str, help="Title ID")
 parser.add_argument('titleversion', type=int, default=None, nargs="?", help="Title version (default: Latest)")
+parser.add_argument('spoofversion', type=int, default=None, nargs="?", help="Spoof title version (default: Disabled)")
 parser.add_argument(
-    '--nopack',
-    action='store_false',
-    default=True,
-    dest='pack_as_cia',
-    help='Do not generate CIA.'
+	'--nopack',
+	action='store_false',
+	default=True,
+	dest='pack_as_cia',
+	help='Do not generate CIA.'
 )
 parser.add_argument(
-    '--deletecontents',
-    action='store_false',
-    default=True,
-    dest='keepcontents',
-    help='Do not keep contents.'
+	'--deletecontents',
+	action='store_false',
+	default=True,
+	dest='keepcontents',
+	help='Do not keep contents.'
 )
 parser.add_argument(
-    '--key',
-    default=None,
-    type=str,
-    dest='encrypted_key',
-    help='Encrypted title key for Ticket generation.'
+	'--key',
+	default=None,
+	type=str,
+	dest='encrypted_key',
+	help='Encrypted title key for Ticket generation.'
 )
 parser.add_argument(
-    '--onlyticket',
-    action='store_true',
-    default=False,
-    dest='onlyticket',
-    help='Only create the ticket, don\'t store anything.'
+	'--onlyticket',
+	action='store_true',
+	default=False,
+	dest='onlyticket',
+	help='Only create the ticket, don\'t store anything.'
 )
 parser.add_argument(
-    '--cdn',
-    action='store_true',
-    default=False,
-    dest='cdndir',
-    help='Store contents like on CDN (without version directory)'
+	'--cdn',
+	action='store_true',
+	default=False,
+	dest='cdndir',
+	help='Store contents like on CDN (without version directory)'
 )
 parser.add_argument(
-    '--base',
-    default="http://nus.cdn.c.shop.nintendowifi.net/ccs/download",
-    type=str,
-    dest='base_url',
-    help='Base URL for CDN download'
+	'--base',
+	default="http://nus.cdn.c.shop.nintendowifi.net/ccs/download",
+	type=str,
+	dest='base_url',
+	help='Base URL for CDN download'
 )
 arguments = parser.parse_args()
 
 
-def main(titleid, titlever=None, pack_as_cia=True, keepcontents=True, enc_titlekey=None, onlyticket=False,
-         cdndir=False, base_url="http://nus.cdn.c.shop.nintendowifi.net/ccs/download"):
-    if len(titleid) != 16:
-        print("Title ID must be 16 characters long.")
-        return
-    try:
-        int(titleid, 16)
-    except ValueError:
-        print("Title ID must be in hexadecimal.")
-        return
+def main(titleid, titlever=None, spoofver=None, pack_as_cia=True, keepcontents=True, enc_titlekey=None, onlyticket=False,
+		 cdndir=False, base_url="http://nus.cdn.c.shop.nintendowifi.net/ccs/download"):
+	if len(titleid) != 16:
+		print("Title ID must be 16 characters long.")
+		return
+	try:
+		int(titleid, 16)
+	except ValueError:
+		print("Title ID must be in hexadecimal.")
+		return
 
-    if onlyticket and not enc_titlekey:
-        print("Please specify an ecrypted titlekey (--key) for Ticket generation.")
-        return
+	if onlyticket and not enc_titlekey:
+		print("Please specify an ecrypted titlekey (--key) for Ticket generation.")
+		return
 
-    if enc_titlekey:
-        if len(enc_titlekey) != 32:
-            print("Encrypted title key must be 32 characters long.")
-            return
-        try:
-            int(enc_titlekey, 16)
-        except ValueError:
-            print("Title key must be in hexadecimal.")
-            return
+	if enc_titlekey:
+		if len(enc_titlekey) != 32:
+			print("Encrypted title key must be 32 characters long.")
+			return
+		try:
+			int(enc_titlekey, 16)
+		except ValueError:
+			print("Title key must be in hexadecimal.")
+			return
 
-    if not pack_as_cia and not keepcontents:
-        print("Running with these settings would produce no output.")
-        return
+	if not pack_as_cia and not keepcontents:
+		print("Running with these settings would produce no output.")
+		return
 
-    titleid = titleid.lower()
-    nus = CIAGEN.NUS(titleid, titlever, base=base_url)
+	titleid = titleid.lower()
+	nus = CIAGEN.NUS(titleid, titlever, base=base_url)
 
-    if onlyticket:
-        print("Generating Ticket for Title {0} v{1}".format(titleid, "[Latest]" if titlever == None else titlever))
-    else:
-        print("Downloading Title {0} v{1}".format(titleid, "[Latest]" if titlever == None else titlever))
+	if onlyticket:
+		print("Generating Ticket for Title {0} v{1}".format(titleid, "[Latest]" if titlever == None else titlever))
+	else:
+		print("Downloading Title {0} v{1}".format(titleid, "[Latest]" if titlever == None else titlever))
 
-    # Download TMD
-    print("* Downloading TMD...")
-    try:
-        tmd = nus.tmd
-    except HTTPError:
-        print("Title not on NUS!")
-        return
+	# Download TMD
+	print("* Downloading TMD...")
+	try:
+		tmd = nus.tmd
+	except HTTPError:
+		print("Title not on NUS!")
+		return
 
-    # Parse TMD
-    print("* Parsing TMD...")
-    total_size = 0
-    for content in tmd.contents:
-        total_size += content.size
-    print("    Title Version: {0}".format(tmd.hdr.titleversion))
-    print("    {0} Content{1}: {2}".format(
-        len(tmd.contents),
-        "s" if len(tmd.contents) > 1 else "",
-        utils.convert_size(total_size)
-    ))
+	# Parse TMD
+	print("* Parsing TMD...")
+	total_size = 0
+	for content in tmd.contents:
+		total_size += content.size
+	print("    Title Version: {0}".format(tmd.hdr.titleversion))
+	print("    {0} Content{1}: {2}".format(
+		len(tmd.contents),
+		"s" if len(tmd.contents) > 1 else "",
+		utils.convert_size(total_size)
+	))
 
-    if titlever == None:
-        titlever = tmd.hdr.titleversion
-    else:
-        if titlever != tmd.hdr.titleversion:
-            print("WARNING: Title version should be {0} but is {1}".format(titleid, tmd.hdr.titleversion))
+	if titlever == None:
+		titlever = tmd.hdr.titleversion
+	else:
+		if titlever != tmd.hdr.titleversion:
+			print("WARNING: Title version should be {0} but is {1}".format(titleid, tmd.hdr.titleversion))
 
-    if titleid != tmd.get_titleid():
-        print("WARNING: Title ID should be {0} but is {1}".format(titleid, tmd.get_titleid()))
+	if titleid != tmd.get_titleid():
+		print("WARNING: Title ID should be {0} but is {1}".format(titleid, tmd.get_titleid()))
+	
+	if spoofver != None:
+		tmd.hdr.titleversion = spoofver
 
-    if cdndir:
-        titlepath = os.path.join("titles", titleid)
-    else:
-        titlepath = os.path.join("titles", titleid, str(titlever))
-    if not os.path.isdir(titlepath):
-        os.makedirs(titlepath)
-    if not onlyticket:
-        if cdndir:
-            tmd.dump(os.path.join(titlepath, "tmd.{0}".format(titlever)))
-        else:
-            tmd.dump(os.path.join(titlepath, "tmd"))
+	if cdndir:
+		titlepath = os.path.join("titles", titleid)
+	else:
+		titlepath = os.path.join("titles", titleid, str(titlever))
+	if not os.path.isdir(titlepath):
+		os.makedirs(titlepath)
+	if not onlyticket:
+		if cdndir:
+			tmd.dump(os.path.join(titlepath, "tmd.{0}".format(titlever)))
+		else:
+			tmd.dump(os.path.join(titlepath, "tmd"))
 
-    # Download Ticket
-    if enc_titlekey:
-        print("* Generating Ticket...")
-        cetk = CIAGEN.Ticket(tickettemplate + magic)
-        cetk.hdr.titleid = tmd.hdr.titleid
-        cetk.hdr.titleversion = tmd.hdr.titleversion
-        cetk.hdr.titlekey = binascii.a2b_hex(enc_titlekey)
-        cetk.dump(os.path.join(titlepath, "cetk"))
-        if onlyticket:
-            print("Finished.")
-            return
-    else:
-        print("* Downloading Ticket...")
-        cetk = nus.ticket
-        if not cetk:
-            if pack_as_cia:
-                print("    Ticket unavailable, can't be packed.")
-                pack_as_cia = False
-            else:
-                print("    Ticket unavailable.")
-        else:
-            cetk.dump(os.path.join(titlepath, "cetk"))
+	# Download Ticket
+	if enc_titlekey:
+		print("* Generating Ticket...")
+		cetk = CIAGEN.Ticket(tickettemplate + magic)
+		cetk.hdr.titleid = tmd.hdr.titleid
+		cetk.hdr.titleversion = tmd.hdr.titleversion
+		cetk.hdr.titlekey = binascii.a2b_hex(enc_titlekey)
+		cetk.dump(os.path.join(titlepath, "cetk"))
+		if onlyticket:
+			print("Finished.")
+			return
+	else:
+		print("* Downloading Ticket...")
+		cetk = nus.ticket
+		if not cetk:
+			if pack_as_cia:
+				print("    Ticket unavailable, can't be packed.")
+				pack_as_cia = False
+			else:
+				print("    Ticket unavailable.")
+		else:
+			cetk.dump(os.path.join(titlepath, "cetk"))
 
-    # Download Contents
-    print("* Downloading Contents...")
-    for i, content_url in enumerate(nus.get_content_urls()):
-        print("    Content #{0} of #{1}: {2} ({3})".format(
-            i + 1,
-            tmd.hdr.contentcount,
-            tmd.contents[i].get_cid(),
-            utils.convert_size(tmd.contents[i].size))
-        )
-        content_path = os.path.join(titlepath, tmd.contents[i].get_cid())
-        req = get(content_url, stream=True)
-        if req.status_code != 200:
-            print("      Failed to download content: Is the title still on the NUS?")
-            return
-        with open(content_path, 'wb') as content_file:
-            for chunk in req.iter_content(chunk_size=5242880):  # Read in 5 MB chunks
-                if chunk:
-                    content_file.write(chunk)
+	# Download Contents
+	print("* Downloading Contents...")
+	for i, content_url in enumerate(nus.get_content_urls()):
+		print("    Content #{0} of #{1}: {2} ({3})".format(
+			i + 1,
+			tmd.hdr.contentcount,
+			tmd.contents[i].get_cid(),
+			utils.convert_size(tmd.contents[i].size))
+		)
+		content_path = os.path.join(titlepath, tmd.contents[i].get_cid())
+		req = get(content_url, stream=True)
+		if req.status_code != 200:
+			print("		 Failed to download content: Is the title still on the NUS?")
+			return
+		with open(content_path, 'wb') as content_file:
+			for chunk in req.iter_content(chunk_size=5242880):	# Read in 5 MB chunks
+				if chunk:
+					content_file.write(chunk)
 
-        if os.path.getsize(content_path) != tmd.contents[i].size:
-            print("      Content size mismatch. Abort...")
-            return
+		if os.path.getsize(content_path) != tmd.contents[i].size:
+			print("		 Content size mismatch. Abort...")
+			return
 
-    # Pack as CIA
-    if pack_as_cia:
-        print("* Creating CIA...")
-        cia_path = os.path.join(titlepath, "{0}-v{1}.cia".format(titleid, titlever))
-        if cdndir:
-            CIAGEN.CIAMaker(titlepath, titlever=titlever).dump(cia_path)
-        else:
-            CIAGEN.CIAMaker(titlepath).dump(cia_path)
-        if not os.path.isfile(cia_path):
-            print("    CIA creation failed.")
-        else:
-            print("    CIA creation successful: {0}".format(cia_path))
-    else:
-        print("Finished.")
+	# Pack as CIA
+	if pack_as_cia:
+		print("* Creating CIA...")
+		cia_path = os.path.join(titlepath, "{0}-v{1}{2}.cia".format(titleid, titlever, "" if spoofver == None else ("-fakev" + str(spoofver))))
+		if cdndir:
+			CIAGEN.CIAMaker(titlepath, titlever=titlever).dump(cia_path)
+		else:
+			CIAGEN.CIAMaker(titlepath).dump(cia_path)
+		if not os.path.isfile(cia_path):
+			print("    CIA creation failed.")
+		else:
+			print("    CIA creation successful: {0}".format(cia_path))
+	else:
+		print("Finished.")
 
-    if not keepcontents:
-        if cdndir:
-            os.remove(os.path.join(titlepath, "tmd.{0}".format(titlever)))
-        else:
-            os.remove(os.path.join(titlepath, "tmd"))
-        try:
-            os.remove(os.path.join(titlepath, "cetk"))
-        except FileNotFoundError:
-            pass
-        for content in tmd.contents:
-            os.remove(os.path.join(titlepath, content.get_cid()))
+	if not keepcontents:
+		if cdndir:
+			os.remove(os.path.join(titlepath, "tmd.{0}".format(titlever)))
+		else:
+			os.remove(os.path.join(titlepath, "tmd"))
+		try:
+			os.remove(os.path.join(titlepath, "cetk"))
+		except FileNotFoundError:
+			pass
+		for content in tmd.contents:
+			os.remove(os.path.join(titlepath, content.get_cid()))
 
 
 if __name__ == "__main__":
-    main(
-        titleid=arguments.titleid,
-        titlever=arguments.titleversion,
-        pack_as_cia=arguments.pack_as_cia,
-        keepcontents=arguments.keepcontents,
-        enc_titlekey=arguments.encrypted_key,
-        onlyticket=arguments.onlyticket,
-        cdndir=arguments.cdndir,
-        base_url=arguments.base_url
-    )
+	main(
+		titleid=arguments.titleid,
+		titlever=arguments.titleversion,
+		spoofver=arguments.spoofversion,
+		pack_as_cia=arguments.pack_as_cia,
+		keepcontents=arguments.keepcontents,
+		enc_titlekey=arguments.encrypted_key,
+		onlyticket=arguments.onlyticket,
+		cdndir=arguments.cdndir,
+		base_url=arguments.base_url
+	)
